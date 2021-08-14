@@ -1,11 +1,11 @@
 
-# Example of a Password Reset Service Using SendGrid API
+## Example of a Password Reset Service Using SendGrid API
 
 
-## How It Works
+### How It Works
 
 
 
-## API Documentation
+### API Documentation
 
 
