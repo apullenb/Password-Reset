@@ -1,11 +1,11 @@
 const express = require("express");
 const db = require("./dbQueries");
 const bcrypt = require("bcrypt");
-const jwtGenerator = require("../../utils/jwtGenerator");
+// const jwtGenerator = require("../../utils/jwtGenerator");
 const jsonParser = express.json();
-const userRouter = express.Router();
-const authorization = require("../../utils/authorization");
-const createToken = require("../../middeware/CreatePWToken");
+const router = express.Router();
+// const authorization = require("../../utils/authorization");
+// const createToken = require("../../middeware/CreatePWToken");
 
 //Registration Route: Create a New User
 router
@@ -65,3 +65,5 @@ router
       })
       .catch(next);
   });
+
+  module.exports = router;
