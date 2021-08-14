@@ -7,8 +7,7 @@ const { SENDGRID_EMAIL, SENDGRID_TEMPLATE } = require('../config')
 const jwtGenerator = require("../../utils/jwtGenerator");
 const jsonParser = express.json();
 const router = express.Router();
-// const authorization = require("../../utils/authorization");
-// const createToken = require("../../middeware/CreatePWToken");
+const createToken = require("../middeware/CreatePWToken");
 
 //Registration Route: Create a New User
 router
@@ -109,7 +108,6 @@ const addToken = await db.insertToken(fields)
       template_id: SENDGRID_TEMPLATE,
     });
 
-//
     axios(sendGridConfig(data))
       .then(function (response) {
         
@@ -122,6 +120,55 @@ const addToken = await db.insertToken(fields)
      
 });
 
+
+//Update user password
+router.put("/reset-password/:id/:token", async (req, res) => {
+  try {
+    let newPass = req.body.password; 
+    const { token } = req.params
+    const { id } = req.params;
+    
+    const lookupToken = await db.matchToken(token)
+   
+    if (lookupToken.length > 0 && lookupToken[0].isUsed === false) {
+      const useToken = await db.useToken(token)
+    const searchUsers = await db.findUserById(id)
+      if (searchUsers.length === 0) {
+      return res.status(400).json({
+        error: "Invalid Password Link",
+      });
+    }   
+    const saltRound = 3;
+    const salt = await bcrypt.genSalt(saltRound);
+    const bcryptPassword = await bcrypt.hash(newPass, salt);
+    newPass = bcryptPassword
+    const user = await db.updatePassword(id, newPass);
+    res.status(200).json(searchUsers[0].username);
+    } else {
+      return res.status(400).json({
+        error: "Invalid Password Reset Link",
+      });
+    }
+  } catch (err) {
+    res.status(500).json(err);
+  }
+});
+router.get("/reset-password/validate/:token", async (req, res) => {
+  try {
+    const { token } = req.params
+    const lookupToken = await db.matchToken(token)
+    if (lookupToken.length > 0 && lookupToken[0].isUsed === false) {
+    return res.status(200).json(true);
+    } else {
+      return res.status(400).json({
+        error: "Invalid Password Reset Link",
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json(err);
+  }
+});
 
 
 

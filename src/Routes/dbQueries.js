@@ -24,8 +24,34 @@ const dbQueries = {
   return bcrypt.compare(password, hash);
  },
 
+// Insert password verification token
+ insertToken (data) {
+  return db("tokens")
+  .insert(data)
+  .returning("*");
+},
 
- 
+// Lookup token for password verification
+ matchToken(data) {
+  return db("tokens")
+    .select("*")
+    .where("token", "=", data)
+    .returning("*");
+},
+
+useToken(data) {
+  return db("tokens")
+    .where("token", "=", data)
+    .update("isUsed", 1)
+    .returning("*");
+},
+
+updatePassword(id, password) {
+  return db("users")
+    .where("id", "=", id)
+    .update("password", password)
+}
+
    }
 
 
