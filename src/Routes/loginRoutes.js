@@ -1,7 +1,10 @@
 const express = require("express");
 const db = require("./dbQueries");
 const bcrypt = require("bcrypt");
-// const jwtGenerator = require("../../utils/jwtGenerator");
+require("dotenv").config();
+const { SENDGRID_EMAIL, SENDGRID_TEMPLATE } = require('../config')
+
+const jwtGenerator = require("../../utils/jwtGenerator");
 const jsonParser = express.json();
 const router = express.Router();
 // const authorization = require("../../utils/authorization");
@@ -26,7 +29,7 @@ router
     const saltRound = 3;
     const salt = await bcrypt.genSalt(saltRound);
     const bcryptPassword = await bcrypt.hash(newUser.password_hash, salt);
-    newUser.password_hash = bcryptPassword;
+    newUser.password = bcryptPassword;
     const addUser = await db.addNewUser(newUser);
 
     res.status(201).json("Account Created Successfully");
@@ -36,7 +39,7 @@ router
   }
 })
 
-// Login Route:
+// Login Route: Match Username & Password with DB & Return Token for Login
 .post("/login", jsonParser, async (req, res, next) => {
   const { username, password } = req.body;
   const loginUser = { username, password };
@@ -65,6 +68,63 @@ router
     })
     .catch(next);
 });
+
+
+// Password Reset Route: Generates a token and sends this token as a link in an email through SendGrid
+router.post("/reset-password", async (req, res) => {
+  const { email } = req.body;
+  const expires = moment().add(5, 'hours')
+  const {targetURL} = req.body;
+  const emailLookup = await db.findUserEmail(email)
+  if (emailLookup.length === 0) {
+    return res.status(400).json({
+      error: "Email Address is Not Associated with Any Accounts",
+    });
+  }  
+const name = emailLookup[0].name
+const id = emailLookup[0].id
+const token = createToken(email, id, name)
+const fields = { token, is_used: 0, user_id: id, application:'Skincare Challenge - password reset', expiration_date: expires.toDate() }
+const addToken = await db.insertToken(fields)
+
+//Email template created in Sendgrid
+    const data = JSON.stringify({
+      from: {
+        email: SENDGRID_EMAIL,
+      },
+      personalizations: [
+        {
+          to: [
+            {
+              email: `${email}`,
+            },
+          ],
+          dynamic_template_data: {
+            name: `${name}`,
+            link: `${targetURL}/forgot-password/${id}/${addToken[0].token}`,
+            expiration: `${moment(addToken[0].expirationDate).calendar()}`
+          },
+        },
+      ],
+      template_id: SENDGRID_TEMPLATE,
+    });
+
+//
+    axios(sendGridConfig(data))
+      .then(function (response) {
+        
+        res.status(201).json(response.data);
+      })
+      .catch(function (error) {
+        console.error(err);
+        res.status(500).json(err);       
+      });
+     
+});
+
+
+
+
 
 module.exports = router;
 

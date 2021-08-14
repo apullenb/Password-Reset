@@ -1,3 +1,4 @@
+const bcrypt = require("bcrypt");
 
 const dbQueries = {
 
@@ -18,6 +19,14 @@ const dbQueries = {
            return rows;
          });
      },
-   
-   
+   // Compare the password received from request with the encrypted password stored in the database
+ comparePasswords(password, hash){
+  return bcrypt.compare(password, hash);
+ },
+
+
+ 
    }
+
+
+   module.exports = dbQueries;
