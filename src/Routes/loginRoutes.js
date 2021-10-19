@@ -73,7 +73,7 @@ router
 router.post("/reset-password", async (req, res) => {
   const { email } = req.body;
   const expires = moment().add(5, 'hours')
-  const {targetURL} = req.body;
+  const {targetURL} = req.body;       //base URL of the password reset site
   const emailLookup = await db.findUserEmail(email)
   if (emailLookup.length === 0) {
     return res.status(400).json({
@@ -105,7 +105,7 @@ const addToken = await db.insertToken(fields)
           },
         },
       ],
-      template_id: SENDGRID_TEMPLATE,
+      template_id: SENDGRID_TEMPLATE,   //Customizations created in config file
     });
 
     axios(sendGridConfig(data))
@@ -120,6 +120,24 @@ const addToken = await db.insertToken(fields)
      
 });
 
+//Check to see if token is valid and has not been used or expired
+router.get("/reset-password/validate/:token", async (req, res) => {
+  try {
+    const { token } = req.params
+    const lookupToken = await db.matchToken(token)
+    if (lookupToken.length > 0 && lookupToken[0].isUsed === false) {
+    return res.status(200).json(true);
+    } else {
+      return res.status(400).json({
+        error: "Invalid Password Reset Link",
+      });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json(err);
+  }
+});
+
 
 //Update user password
 router.put("/reset-password/:id/:token", async (req, res) => {
@@ -128,8 +146,8 @@ router.put("/reset-password/:id/:token", async (req, res) => {
     const { token } = req.params
     const { id } = req.params;
     
-    const lookupToken = await db.matchToken(token)
-   
+    const lookupToken = await db.matchToken(token) 
+    //Verify again that token is valid and has not been used or expired
     if (lookupToken.length > 0 && lookupToken[0].isUsed === false) {
       const useToken = await db.useToken(token)
     const searchUsers = await db.findUserById(id)
@@ -153,22 +171,7 @@ router.put("/reset-password/:id/:token", async (req, res) => {
     res.status(500).json(err);
   }
 });
-router.get("/reset-password/validate/:token", async (req, res) => {
-  try {
-    const { token } = req.params
-    const lookupToken = await db.matchToken(token)
-    if (lookupToken.length > 0 && lookupToken[0].isUsed === false) {
-    return res.status(200).json(true);
-    } else {
-      return res.status(400).json({
-        error: "Invalid Password Reset Link",
-      });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json(err);
-  }
-});
+
 
 
 
